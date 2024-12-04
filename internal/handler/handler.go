@@ -1,7 +1,6 @@
 package handler
 
 import (
-	// "io"
 	"bytes"
 	"fmt"
 	"image"
@@ -10,9 +9,9 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
-	"github.com/A5TA/NutriTrack-Ai-backend/internal/ai"
 	"github.com/gin-gonic/gin"
 )
 
@@ -112,12 +111,36 @@ func PredictFood(c *gin.Context) {
 	}
 
 	// Get prediction from the predictor
-	result, err := ai.PredictFood(img)
+	err = storeImage(img)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Prediction failed: %v", err)})
 		return
 	}
 
 	// Return the prediction
-	c.JSON(http.StatusOK, gin.H{"prediction": result})
+	c.JSON(http.StatusOK, gin.H{"prediction": "result"})
+}
+
+func storeImage(img image.Image) error {
+	// Create a temporary directory to store the image
+	tmpDir := "temp_images"
+	err := os.MkdirAll(tmpDir, os.ModePerm)
+	if err != nil {
+		return fmt.Errorf("failed to create temporary directory: %v", err)
+	}
+
+	// Save the image to a temporary file (JPEG format)
+	tmpfile, err := os.CreateTemp(tmpDir, "input_image_*.jpg")
+	if err != nil {
+		return fmt.Errorf("failed to create temporary file: %v", err)
+	}
+	defer tmpfile.Close()
+
+	// Encode the image as JPEG and save it to the temporary file
+	err = jpeg.Encode(tmpfile, img, nil)
+	if err != nil {
+		return fmt.Errorf("failed to encode image as JPEG: %v", err)
+	}
+
+	return nil
 }
