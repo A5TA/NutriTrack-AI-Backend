@@ -1,9 +1,18 @@
 package handler
 
 import (
+	// "io"
+	"bytes"
+	"fmt"
+	"image"
+	"image/jpeg"
+	"image/png"
+	"io"
+	"log"
 	"net/http"
 	"time"
 
+	"github.com/A5TA/NutriTrack-Ai-backend/internal/ai"
 	"github.com/gin-gonic/gin"
 )
 
@@ -64,4 +73,51 @@ func UpdateMeal(c *gin.Context) {
 
 func DeleteMeal(c *gin.Context) {
 	c.Status(http.StatusNotImplemented)
+}
+
+// PredictFood handles the food prediction request
+func PredictFood(c *gin.Context) {
+	// Get the image file from the request
+	file, _, err := c.Request.FormFile("image")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to get image"})
+		return
+	}
+	defer file.Close()
+
+	// Read the image bytes
+	imgBytes, err := io.ReadAll(file)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read image"})
+		return
+	}
+
+	// Validate the image format by reading the file header
+	contentType := http.DetectContentType(imgBytes[:512])
+	log.Printf("Detected content type: %s", contentType)
+
+	// Explicitly decode as JPEG or PNG
+	var img image.Image
+	switch contentType {
+	case "image/jpeg":
+		img, err = jpeg.Decode(bytes.NewReader(imgBytes))
+	case "image/png":
+		img, err = png.Decode(bytes.NewReader(imgBytes))
+	default:
+		err = fmt.Errorf("unsupported content type: %s", contentType)
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to decode image: %v", err)})
+		return
+	}
+
+	// Get prediction from the predictor
+	result, err := ai.PredictFood(img)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Prediction failed: %v", err)})
+		return
+	}
+
+	// Return the prediction
+	c.JSON(http.StatusOK, gin.H{"prediction": result})
 }

@@ -19,5 +19,7 @@ func New() *gin.Engine {
 	r.PUT("/meal/:meal_id", handler.UpdateMeal) // Use PUT for updates
 	r.DELETE("/meal/:meal_id", handler.DeleteMeal)
 
+	//Ai predictions
+	r.POST("/predict-food", handler.PredictFood)
 	return r
 }
