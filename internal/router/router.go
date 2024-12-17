@@ -29,7 +29,6 @@ func New() *gin.Engine {
 	r.PUT("/meal/:meal_id", handler.UpdateMeal) // Use PUT for updates
 	r.DELETE("/meal/:meal_id", handler.DeleteMeal)
 
-	//Ai predictions
-	r.POST("/store-prediction", handler.PredictFood)
-	return r
+	r.POST("/store-prediction", handler.StorePrediction) //successfully predicted images will be sent using this endpoint
+ 	return r
 }

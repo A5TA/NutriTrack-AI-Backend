@@ -74,8 +74,8 @@ func DeleteMeal(c *gin.Context) {
 	c.Status(http.StatusNotImplemented)
 }
 
-// PredictFood handles the food prediction request
-func PredictFood(c *gin.Context) {
+// StorePrediction handles the food prediction storing request
+func StorePrediction(c *gin.Context) {
 	// Get the image file from the request
 	file, _, err := c.Request.FormFile("image")
 	if err != nil {
@@ -110,7 +110,7 @@ func PredictFood(c *gin.Context) {
 		return
 	}
 
-	// Get prediction from the predictor
+	// Store the image in the temp folder for now - replace with db later
 	err = storeImage(img)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Prediction failed: %v", err)})
