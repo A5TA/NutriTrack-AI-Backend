@@ -19,6 +19,7 @@ func PostMeal(c *gin.Context) {
 	var newMeal Meal
 
 	if err := c.BindJSON(&newMeal); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
 		return
 	}
 
@@ -76,10 +77,17 @@ func DeleteMeal(c *gin.Context) {
 
 // StorePrediction handles the food prediction storing request
 func StorePrediction(c *gin.Context) {
+	//Get the image's predicted name
+	name := c.PostForm("name")
+	if name == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Name is required for storing predictions"})
+		return
+	}
+
 	// Get the image file from the request
 	file, _, err := c.Request.FormFile("image")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to get image"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to get image attachment"})
 		return
 	}
 	defer file.Close()
@@ -111,17 +119,17 @@ func StorePrediction(c *gin.Context) {
 	}
 
 	// Store the image in the temp folder for now - replace with db later
-	err = storeImage(img)
+	err = storeImage(img, name)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Prediction failed: %v", err)})
 		return
 	}
 
 	// Return the prediction
-	c.JSON(http.StatusOK, gin.H{"prediction": "result"})
+	c.JSON(http.StatusOK, gin.H{"msg": name + " image was stored successfully!"})
 }
 
-func storeImage(img image.Image) error {
+func storeImage(img image.Image, name string) error {
 	// Create a temporary directory to store the image
 	tmpDir := "temp_images"
 	err := os.MkdirAll(tmpDir, os.ModePerm)
@@ -130,7 +138,7 @@ func storeImage(img image.Image) error {
 	}
 
 	// Save the image to a temporary file (JPEG format)
-	tmpfile, err := os.CreateTemp(tmpDir, "input_image_*.jpg")
+	tmpfile, err := os.CreateTemp(tmpDir, name+"_image_*.jpg")
 	if err != nil {
 		return fmt.Errorf("failed to create temporary file: %v", err)
 	}
