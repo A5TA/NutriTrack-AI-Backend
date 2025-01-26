@@ -20,12 +20,21 @@ func New() *gin.Engine {
 	}))
 
 	// Routes
+	//Users
+	// r.POST("/register", handler.Register) // Register a new user
+	// r.POST("/login", handler.Login)       // Login a user
 
+
+    //Meals
 	r.GET("/getAllMeals", handler.GetAllMeals) // Get all meals for a user
 	r.GET("/meal", handler.GetMeal)            // Get a single meal by ID for a user
 	r.PUT("/meal", handler.UpdateMeal)         // Update a user's meal
 	r.DELETE("/meal", handler.DeleteMeal)      //Delete a user's meal
 
+	//can also be called -store-meal
 	r.POST("/store-prediction", handler.StorePrediction) //successfully predicted images will be sent using this endpoint and this also stores meals
+
+	r.GET("/getMacros/:mealName", handler.GetMealMacros) // Get the macros for a meal
+	r.POST("/addMacros", handler.AddMealMacros)          // Add macros for a meal
 	return r
 }

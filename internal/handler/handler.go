@@ -11,6 +11,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/A5TA/NutriTrack-Ai-backend/internal/config"
@@ -220,8 +221,16 @@ func storeImage(img image.Image, name string, mealType string) (primitive.M, err
 	}
 	currentTimeEST := time.Now().In(loc)
 
-	// Print EST time
-	fmt.Println("Current EST time:", currentTimeEST)
+	// Get the macros for the meal
+	// Get the MongoDB collection for macros
+	macrosCollection := config.GetCollection("macros")
+
+	// Find the macros by meal name
+	var macros Macros
+	err = macrosCollection.FindOne(context.TODO(), bson.M{"name": name}).Decode(&macros)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find macros for meal %s: %v", name, err)
+	}
 
 	// Create the document to insert
 	document := bson.M{
@@ -229,6 +238,7 @@ func storeImage(img image.Image, name string, mealType string) (primitive.M, err
 		"mealType": mealType,
 		"image":    fileName, // Store the name of the image file for now
 		"userId":   "Some User",
+		"macros":   macros,
 		"date":     currentTimeEST,
 	}
 
@@ -245,4 +255,90 @@ func storeImage(img image.Image, name string, mealType string) (primitive.M, err
 	document["_id"] = res.InsertedID
 
 	return document, nil
+}
+
+
+// Getting Macros for a meal
+func GetMealMacros(c *gin.Context) {
+	//using only the meals name to find the macros using 
+	mealName := c.Param("mealName")
+	if mealName == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Meal Name is required for searching meals"})
+		return
+	}
+
+	// Get the MongoDB collection
+	collection := config.GetCollection("macros")
+
+	// Find the meal by ID
+	var macros Macros
+	err := collection.FindOne(context.TODO(), bson.M{"name": mealName}).Decode(&macros)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Meal not found"})
+		return
+	}
+
+	// Return the meal
+	c.JSON(http.StatusOK, macros)
+}
+
+// AddMealMacros adds the macros for a meal
+func AddMealMacros(c *gin.Context) {
+	// Get the meal name
+	mealName := c.PostForm("mealName")
+	if mealName == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Meal Name is required"})
+		return
+	}
+
+	// Get the macros
+	calories := c.PostForm("calories")
+	protein := c.PostForm("protein")
+	carbs := c.PostForm("carbs")
+	fat := c.PostForm("fat")
+
+	// Convert the macros to float64
+	caloriesFloat, err := strconv.ParseFloat(calories, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid calories format"})
+		return
+	}
+	proteinFloat, err := strconv.ParseFloat(protein, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid protein format"})
+		return
+	}
+	carbsFloat, err := strconv.ParseFloat(carbs, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid carbs format"})
+		return
+	}
+	fatFloat, err := strconv.ParseFloat(fat, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid fat format"})
+		return
+	}
+
+	// Get the MongoDB collection
+	collection := config.GetCollection("macros")
+
+	// Create the document to insert
+	document := bson.M{
+		"name":     mealName,
+		"calories": caloriesFloat,
+		"protein":  proteinFloat,
+		"carbs":    carbsFloat,
+		"fat":      fatFloat,
+		"createdAt": time.Now(),
+	}
+
+	// Insert the document into the collection
+	_, err = collection.InsertOne(context.TODO(), document)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to store macros"})
+		return
+	}
+
+	// Return the inserted document
+	c.JSON(http.StatusOK, document)
 }
