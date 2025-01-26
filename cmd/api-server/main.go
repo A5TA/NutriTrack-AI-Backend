@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/A5TA/NutriTrack-Ai-backend/internal/config"
 	"github.com/A5TA/NutriTrack-Ai-backend/internal/router"
 	"github.com/joho/godotenv"
 )
@@ -16,6 +17,8 @@ func main() {
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
+	// Initialize The MongoDB Client
+	config.InitializeMongoClient()
 
 	httpPort := os.Getenv("API_PORT")
 	if httpPort == "" {

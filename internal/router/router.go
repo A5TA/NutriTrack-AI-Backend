@@ -20,15 +20,12 @@ func New() *gin.Engine {
 	}))
 
 	// Routes
-	r.POST("/meal", handler.PostMeal)
-	//Handle both the single and multiple day requests with this handler
-	r.GET("/meals/:startDate", handler.GetAllMeals)
-	r.GET("/meals/:startDate/:endDate", handler.GetAllMeals)
 
-	r.GET("/meal/:meal_id", handler.GetMeal)
-	r.PUT("/meal/:meal_id", handler.UpdateMeal) // Use PUT for updates
-	r.DELETE("/meal/:meal_id", handler.DeleteMeal)
+	r.GET("/getAllMeals", handler.GetAllMeals) // Get all meals for a user
+	r.GET("/meal", handler.GetMeal)            // Get a single meal by ID for a user
+	r.PUT("/meal", handler.UpdateMeal)         // Update a user's meal
+	r.DELETE("/meal", handler.DeleteMeal)      //Delete a user's meal
 
-	r.POST("/store-prediction", handler.StorePrediction) //successfully predicted images will be sent using this endpoint
- 	return r
+	r.POST("/store-prediction", handler.StorePrediction) //successfully predicted images will be sent using this endpoint and this also stores meals
+	return r
 }
