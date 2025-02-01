@@ -27,6 +27,7 @@ func GetAllMeals(c *gin.Context) {
 	userId := c.PostForm("userId")
 	if userId == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "User ID is required"})
+		log.Println("User ID is required")
 		return
 	}
 
@@ -37,6 +38,7 @@ func GetAllMeals(c *gin.Context) {
 	startDate, err := time.Parse("2006-01-02", startDateStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid startDate format, expected YYYY-MM-DD"})
+		log.Println("Invalid startDate format, expected YYYY-MM-DD")
 		return
 	}
 	// Parse endDate, or default it to startDate if not provided
@@ -47,6 +49,7 @@ func GetAllMeals(c *gin.Context) {
 		endDate, err = time.Parse("2006-01-02", endDateStr)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid endDate format, expected YYYY-MM-DD"})
+			log.Println("Invalid endDate format, expected YYYY-MM-DD")
 			return
 		}
 	}
@@ -67,6 +70,7 @@ func GetAllMeals(c *gin.Context) {
 	cursor, err := collection.Find(context.TODO(), filter)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch meals"})
+		log.Println("Failed to fetch meals")
 		return
 	}
 	defer cursor.Close(context.TODO())
@@ -75,6 +79,7 @@ func GetAllMeals(c *gin.Context) {
 	var meals []Meal
 	if err = cursor.All(context.TODO(), &meals); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to decode meals"})
+		log.Println("Failed to decode meals")
 		return
 	}
 
@@ -129,6 +134,13 @@ func DeleteMeal(c *gin.Context) {
 
 // StorePrediction handles the food prediction storing request
 func StorePrediction(c *gin.Context) {
+	//Get the users Id
+	userId := c.PostForm("userId")
+	if userId == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "User ID is required for storing predictions"})
+		return
+	}
+
 	//Get the image's predicted name
 	name := c.PostForm("name")
 	if name == "" {
@@ -178,7 +190,7 @@ func StorePrediction(c *gin.Context) {
 	}
 
 	// Store the image in the temp folder for now - replace with db later
-	document, err := storeImage(img, name, mealType)
+	document, err := storeImage(img, name, mealType, userId)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Prediction failed: %v", err)})
 		return
@@ -188,7 +200,7 @@ func StorePrediction(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"msg": name + " image was stored successfully!", "meal": document})
 }
 
-func storeImage(img image.Image, name string, mealType string) (primitive.M, error) {
+func storeImage(img image.Image, name string, mealType string, userId string) (primitive.M, error) {
 	// Get the MongoDB collection
 	collection := config.GetCollection("meals")
 
@@ -236,8 +248,8 @@ func storeImage(img image.Image, name string, mealType string) (primitive.M, err
 	document := bson.M{
 		"name":     name,
 		"mealType": mealType,
-		"image":    fileName, // Store the name of the image file for now
-		"userId":   "Some User",
+		"image":    tmpfile.Name()[7:], // Remove the "images/" prefix from the image file name
+		"userId":   userId,
 		"macros":   macros,
 		"date":     currentTimeEST,
 	}
@@ -257,10 +269,9 @@ func storeImage(img image.Image, name string, mealType string) (primitive.M, err
 	return document, nil
 }
 
-
 // Getting Macros for a meal
 func GetMealMacros(c *gin.Context) {
-	//using only the meals name to find the macros using 
+	//using only the meals name to find the macros using
 	mealName := c.Param("mealName")
 	if mealName == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Meal Name is required for searching meals"})
@@ -280,6 +291,32 @@ func GetMealMacros(c *gin.Context) {
 
 	// Return the meal
 	c.JSON(http.StatusOK, macros)
+}
+
+func GetAllMealMacros(c *gin.Context) {
+	// Get the MongoDB collection
+	collection := config.GetCollection("macros")
+
+	// Find all the meals
+	cursor, err := collection.Find(context.TODO(), bson.M{})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch meals"})
+		return
+	}
+	defer cursor.Close(context.TODO())
+
+	// Decode the meals
+	var macros []Macros
+	if err = cursor.All(context.TODO(), &macros); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to decode meals"})
+		return
+	}
+
+	// Return the meals
+	c.JSON(http.StatusOK, gin.H{
+		"meals": macros,
+		"count": len(macros),
+	})
 }
 
 // AddMealMacros adds the macros for a meal
@@ -324,11 +361,11 @@ func AddMealMacros(c *gin.Context) {
 
 	// Create the document to insert
 	document := bson.M{
-		"name":     mealName,
-		"calories": caloriesFloat,
-		"protein":  proteinFloat,
-		"carbs":    carbsFloat,
-		"fat":      fatFloat,
+		"name":      mealName,
+		"calories":  caloriesFloat,
+		"protein":   proteinFloat,
+		"carbs":     carbsFloat,
+		"fat":       fatFloat,
 		"createdAt": time.Now(),
 	}
 
@@ -341,4 +378,34 @@ func AddMealMacros(c *gin.Context) {
 
 	// Return the inserted document
 	c.JSON(http.StatusOK, document)
+}
+
+// Get image from the images folder by name
+func GetImage(c *gin.Context) {
+	// Get the image name from the URL
+	imageName := c.Param("imageName")
+	if imageName == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Image name is required"})
+		return
+	}
+
+	log.Printf("Getting image: %s", imageName)
+
+	// Open the image file
+	imgFile, err := os.Open("images/" + imageName)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Image not found"})
+		return
+	}
+	defer imgFile.Close()
+
+	// Set the content type based on the image extension
+	contentType := "image/jpeg"
+	if imageName[len(imageName)-4:] == ".png" {
+		contentType = "image/png"
+	}
+
+	// Set the headers and return the image
+	c.Header("Content-Type", contentType)
+	http.ServeContent(c.Writer, c.Request, imageName, time.Now(), imgFile)
 }

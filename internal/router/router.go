@@ -26,7 +26,7 @@ func New() *gin.Engine {
 
 
     //Meals
-	r.GET("/getAllMeals", handler.GetAllMeals) // Get all meals for a user
+	r.POST("/getAllMeals", handler.GetAllMeals) // Get all meals for a user
 	r.GET("/meal", handler.GetMeal)            // Get a single meal by ID for a user
 	r.PUT("/meal", handler.UpdateMeal)         // Update a user's meal
 	r.DELETE("/meal", handler.DeleteMeal)      //Delete a user's meal
@@ -36,5 +36,9 @@ func New() *gin.Engine {
 
 	r.GET("/getMacros/:mealName", handler.GetMealMacros) // Get the macros for a meal
 	r.POST("/addMacros", handler.AddMealMacros)          // Add macros for a meal
+	r.GET("/getAllMealMacros", handler.GetAllMealMacros) // Get all meal macros
+
+	//Get Image using the image name
+	r.GET("/getImage/:imageName", handler.GetImage)
 	return r
 }
