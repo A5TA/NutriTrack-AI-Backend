@@ -34,8 +34,16 @@ func GetAllMeals(c *gin.Context) {
 	startDateStr := c.PostForm("startDate")
 	endDateStr := c.PostForm("endDate")
 
-	// Parse dates
-	startDate, err := time.Parse("2006-01-02", startDateStr)
+	// Load EST timezone
+	loc, err := time.LoadLocation("America/New_York")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load EST timezone"})
+		log.Println("Failed to load EST timezone:", err)
+		return
+	}
+
+	// Parse startDate and set it to EST
+	startDate, err := time.ParseInLocation("2006-01-02", startDateStr, loc)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid startDate format, expected YYYY-MM-DD"})
 		log.Println("Invalid startDate format, expected YYYY-MM-DD")
@@ -46,7 +54,7 @@ func GetAllMeals(c *gin.Context) {
 	if endDateStr == "" {
 		endDate = startDate
 	} else {
-		endDate, err = time.Parse("2006-01-02", endDateStr)
+		endDate, err = time.ParseInLocation("2006-01-02", endDateStr, loc)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid endDate format, expected YYYY-MM-DD"})
 			log.Println("Invalid endDate format, expected YYYY-MM-DD")
