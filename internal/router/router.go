@@ -36,6 +36,7 @@ func New() *gin.Engine {
 
 	r.GET("/getMacros/:mealName", handler.GetMealMacros) // Get the macros for a meal
 	r.POST("/addMacros", handler.AddMealMacros)          // Add macros for a meal
+	r.POST("/addBulkMacros", handler.AddBulkMealMacros) //Adds macros in bulk given a json of macros
 	r.GET("/getAllMealMacros", handler.GetAllMealMacros) // Get all meal macros
 
 	//Get Image using the image name

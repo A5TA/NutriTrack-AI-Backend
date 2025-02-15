@@ -388,6 +388,43 @@ func AddMealMacros(c *gin.Context) {
 	c.JSON(http.StatusOK, document)
 }
 
+func AddBulkMealMacros(c *gin.Context) {
+	var requestData map[string]map[string]float64
+
+	// Parse the JSON body
+	if err := c.BindJSON(&requestData); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON format"})
+		return
+	}
+
+	// Convert input data into an array of Macro documents
+	var macros []interface{}
+	for meal, data := range requestData {
+		macros = append(macros, Macro{
+			Name:     meal,
+			Calories: data["calories"],
+			Protein:  data["protein"],
+			Carbs:    data["carbs"],
+			Fat:      data["fat"],
+			CreatedAt:  time.Now(),
+		})
+	}
+
+	// fmt.Print(macros)
+	// Get the MongoDB collection
+	collection := config.GetCollection("macros")
+
+	// Insert into MongoDB
+	_, err := collection.InsertMany(context.TODO(), macros)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to store macros"})
+		return
+	}
+
+	// Return success response
+	c.JSON(http.StatusOK, gin.H{"message": "Bulk macros uploaded successfully", "count": len(macros)})
+}
+
 // Get image from the images folder by name
 func GetImage(c *gin.Context) {
 	// Get the image name from the URL

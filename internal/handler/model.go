@@ -25,3 +25,13 @@ type Macros struct {
 	Fat       float64            `bson:"fat"`
 	CreatedAt time.Time          `bson:"createdAt"`
 }
+
+//Used in bulk upload - not using id
+type Macro struct {
+	Name     string    `bson:"name"`
+	Calories float64   `bson:"calories"`
+	Protein  float64   `bson:"protein"`
+	Carbs    float64   `bson:"carbs"`
+	Fat      float64   `bson:"fat"`
+	CreatedAt  time.Time `bson:"createdAt"`
+}
